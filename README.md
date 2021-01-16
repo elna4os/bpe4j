@@ -5,6 +5,7 @@ Some points:
 2. Based on Stream API ([Collection.parallelStream](https://docs.oracle.com/javase/8/docs/api/java/util/Collection.html#parallelStream--) operation)
 3. Number of threads is controlled by JVM
 4. Parallel processing is used only for learning
+5. Encoding/decoding are not implemented
 
 To do:
 1. Add ability to set number of threads
