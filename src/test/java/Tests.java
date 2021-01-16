@@ -29,17 +29,23 @@ public class Tests extends TestCase {
         return result;
     }
 
-    public void testLearning() {
+    private BPE getBPE(int lineLimit, int vocabSize) {
         System.out.println("Reading test data..");
-        List<String> data = loadData();
-        BPE bpe = new BPE(data, 100);
+        List<String> data = loadData().subList(0, lineLimit);
+
+        return new BPE(data, vocabSize);
+    }
+
+    public void testLearning() {
+        BPE bpe = getBPE(5000, 100);
+        System.out.println("Vocabulary: " + bpe.getVocab());
     }
 
     public void testEncoding() {
-
+        // TODO Add test
     }
 
     public void testDecoding() {
-
+        // TODO Add test
     }
 }

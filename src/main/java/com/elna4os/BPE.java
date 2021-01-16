@@ -1,5 +1,7 @@
 package main.java.com.elna4os;
 
+import javafx.util.Pair;
+
 import java.io.File;
 import java.io.Serializable;
 import java.util.*;
@@ -9,10 +11,10 @@ import java.util.stream.Collectors;
  * Byte Pair Encoding implementation that uses parallelStream
  */
 public class BPE implements Encoder, Decoder, Serializable {
-    private final String BEGINNING_OF_WORD = "<bow>";
     private final int maxVocabSize;
     private final HashSet<String> vocab = new HashSet<>();
-    private final List<List<String>> internalData = Collections.synchronizedList(new ArrayList<>());
+    private List<String> sortedVocab;
+    private List<List<String>> internalData = Collections.synchronizedList(new ArrayList<>());
 
     /**
      * @param data         Texts
@@ -29,34 +31,8 @@ public class BPE implements Encoder, Decoder, Serializable {
         learn();
     }
 
-    private void fillInitialVocab(List<String> data) {
-        vocab.addAll(
-                data.parallelStream().flatMap(text -> Arrays.stream(
-                        text.split(""))
-                ).collect(Collectors.toCollection(HashSet::new))
-        );
-    }
-
-    private void fillInternalData(List<String> data) {
-        data.parallelStream().forEach(text -> {
-            List<String> textSplitted = Arrays.asList(text.split(""));
-            textSplitted.replaceAll(x -> x.replaceAll("\\s+", BEGINNING_OF_WORD));
-            internalData.add(textSplitted);
-        });
-    }
-
-    private void learn() {
-        while (vocab.size() < maxVocabSize || !internalData.isEmpty()) {
-            internalData.parallelStream().map(parts -> {
-                return null;
-            }).reduce((x, y) -> {
-                return null;
-            });
-        }
-    }
-
-    private void join(String first, String second) {
-
+    public List<String> getVocab() {
+        return sortedVocab;
     }
 
     /**
@@ -65,7 +41,8 @@ public class BPE implements Encoder, Decoder, Serializable {
      */
     @Override
     public String[] encode(String text) {
-        return null;
+        // TODO Implement operation
+        throw new UnsupportedOperationException("Not implemented");
     }
 
     /**
@@ -74,20 +51,96 @@ public class BPE implements Encoder, Decoder, Serializable {
      */
     @Override
     public String decode(String[] tokens) {
-        return null;
+        // TODO Implement operation
+        throw new UnsupportedOperationException("Not implemented");
     }
 
     /**
-     * @param file
+     * @param file File that will contain a serialized tokenizer
      */
     public void serializeToFile(File file) {
+        // TODO Implement operation
+        throw new UnsupportedOperationException("Not implemented");
     }
 
     /**
-     * @param file
-     * @return
+     * @param file File that contains a serialized tokenizer
+     * @return BPE instance
      */
     public static BPE deserializeFromFile(File file) {
-        return null;
+        // TODO Implement operation
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    private void fillInitialVocab(List<String> data) {
+        vocab.addAll(
+                data.parallelStream().flatMap(text -> Arrays.stream(text.split(""))).collect(Collectors.toCollection(HashSet::new))
+        );
+        vocab.remove("\\s");
+    }
+
+    private void fillInternalData(List<String> data) {
+        data.parallelStream().forEach(
+                text -> Arrays.asList(text.split("\\s")).forEach(part -> internalData.add(Arrays.asList(part.split(""))))
+        );
+    }
+
+    private void learn() {
+        int round = 0;
+        clear();
+        while (vocab.size() < maxVocabSize && !internalData.isEmpty()) {
+            Optional<HashMap<Pair<String, String>, Integer>> roundStats = internalData.parallelStream().map(parts -> {
+                HashMap<Pair<String, String>, Integer> result = new HashMap<>();
+                if (parts.size() == 1)
+                    return result;
+                for (int i = 0; i < parts.size() - 1; i++) {
+                    String a = parts.get(i);
+                    String b = parts.get(i + 1);
+                    Pair<String, String> pair = new Pair<>(a, b);
+                    result.putIfAbsent(pair, 1);
+                    result.computeIfPresent(pair, (k, v) -> v + 1);
+                }
+
+                return result;
+            }).reduce((x, y) -> {
+                x.forEach((k, v) -> y.merge(k, v, Integer::sum));
+                return y;
+            });
+
+            if (!roundStats.isPresent())
+                break;
+            Pair<String, String> winner = Collections.max(roundStats.get().entrySet(), Comparator.comparingInt(Map.Entry::getValue)).getKey();
+            vocab.add(winner.getKey() + winner.getValue());
+
+            merge(winner);
+            clear();
+            System.out.printf("round=%d, vocab_size=%d, internal_data_size=%d\n", round++, vocab.size(), internalData.size());
+        }
+
+        sortedVocab = new ArrayList<>(vocab);
+        sortedVocab.sort(Comparator.comparing(String::length).reversed().thenComparing(String::compareTo));
+    }
+
+    private void merge(Pair<String, String> pair) {
+        internalData = internalData.parallelStream().map(parts -> {
+            Stack<String> stack = new Stack<>();
+            parts.forEach(x -> {
+                if (!stack.empty()) {
+                    String top = stack.peek();
+                    if (top.equals(pair.getKey()) && x.equals(pair.getValue())) {
+                        stack.pop();
+                        stack.add(pair.getKey() + pair.getValue());
+                    } else
+                        stack.add(x);
+                } else
+                    stack.add(x);
+            });
+
+            return new ArrayList<>(stack);
+        }).collect(Collectors.toList());
+    }
+
+    private void clear() {
+        internalData = internalData.parallelStream().filter(x -> x.size() > 1).collect(Collectors.toList());
     }
 }
