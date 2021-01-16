@@ -1,5 +1,7 @@
 # BPE (byte pair encoding) tokenization for Java
 
+A toy project. Use this code on your own risk :)
+
 Some points:
 1. Basic implementation (no dropout or other enhancements)
 2. Based on Stream API ([Collection.parallelStream](https://docs.oracle.com/javase/8/docs/api/java/util/Collection.html#parallelStream--) operation)
