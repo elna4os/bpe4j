@@ -1,7 +1,4 @@
-package test.java;
-
 import junit.framework.TestCase;
-import main.java.com.elna4os.BPE;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -9,7 +6,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Tests extends TestCase {
+public class Test extends TestCase {
     private List<String> loadData() {
         List<String> result = new ArrayList<>();
         String path = this.getClass().getResource("/book.txt").getPath();
@@ -37,7 +34,7 @@ public class Tests extends TestCase {
     }
 
     public void testLearning() {
-        BPE bpe = getBPE(5000, 100);
+        BPE bpe = getBPE(1000, 100);
         System.out.println("Vocabulary: " + bpe.getVocab());
     }
 
@@ -46,6 +43,14 @@ public class Tests extends TestCase {
     }
 
     public void testDecoding() {
+        // TODO Add test
+    }
+
+    public void testSerialization() {
+        // TODO Add test
+    }
+
+    public void testDeserialization() {
         // TODO Add test
     }
 }

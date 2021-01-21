@@ -1,16 +1,11 @@
-package main.java.com.elna4os;
-
-import javafx.util.Pair;
-
-import java.io.File;
-import java.io.Serializable;
+import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
  * Byte Pair Encoding implementation that uses parallelStream
  */
-public class BPE implements Encoder, Decoder, Serializable {
+public class BPE implements Serializable {
     private final int maxVocabSize;
     private final HashSet<String> vocab = new HashSet<>();
     private List<String> sortedVocab;
@@ -39,8 +34,7 @@ public class BPE implements Encoder, Decoder, Serializable {
      * @param text String to encode
      * @return Tokenized string
      */
-    @Override
-    public String[] encode(String text) {
+    public String[] tokenize(String text) {
         // TODO Implement operation
         throw new UnsupportedOperationException("Not implemented");
     }
@@ -49,27 +43,35 @@ public class BPE implements Encoder, Decoder, Serializable {
      * @param tokens Tokenized string
      * @return Decoded string
      */
-    @Override
-    public String decode(String[] tokens) {
-        // TODO Implement operation
-        throw new UnsupportedOperationException("Not implemented");
+    public String detokenize(String[] tokens, String joiner) {
+        return String.join(joiner, tokens);
     }
 
     /**
      * @param file File that will contain a serialized tokenizer
      */
     public void serializeToFile(File file) {
-        // TODO Implement operation
-        throw new UnsupportedOperationException("Not implemented");
+        try (FileOutputStream fileOutputStream = new FileOutputStream(file.getPath());
+             ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream)) {
+            objectOutputStream.writeObject(this);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
      * @param file File that contains a serialized tokenizer
-     * @return BPE instance
+     * @return BPE instance if success, else null
      */
     public static BPE deserializeFromFile(File file) {
-        // TODO Implement operation
-        throw new UnsupportedOperationException("Not implemented");
+        try (FileInputStream fileInputStream = new FileInputStream(file.getPath());
+             ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream)) {
+            return (BPE) objectInputStream.readObject();
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        return null;
     }
 
     private void fillInitialVocab(List<String> data) {
@@ -108,6 +110,8 @@ public class BPE implements Encoder, Decoder, Serializable {
             });
 
             if (!roundStats.isPresent())
+                break;
+            if (roundStats.get().isEmpty())
                 break;
             Pair<String, String> winner = Collections.max(roundStats.get().entrySet(), Comparator.comparingInt(Map.Entry::getValue)).getKey();
             vocab.add(winner.getKey() + winner.getValue());
