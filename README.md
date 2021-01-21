@@ -9,8 +9,7 @@ Some points:
 
 To do:
 1. Add ability to set number of threads
-2. Implement an encoding
-3. Implement remaining tests
+2. Implement tokenization
 
 Source:<br>
 [Neural Machine Translation of Rare Words with Subword Units](https://arxiv.org/pdf/1508.07909.pdf)
