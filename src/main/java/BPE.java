@@ -1,6 +1,7 @@
 import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Byte Pair Encoding implementation that uses parallelStream
@@ -10,13 +11,16 @@ public class BPE implements Serializable {
     private final HashSet<String> vocab = new HashSet<>();
     private List<String> sortedVocab;
     private List<List<String>> internalData = Collections.synchronizedList(new ArrayList<>());
+    private final String bowToken;
 
     /**
      * @param data         Texts
      * @param maxVocabSize Vocabulary max size
+     * @param bowToken     Word beginning token
      */
-    public BPE(List<String> data, int maxVocabSize) {
+    public BPE(List<String> data, int maxVocabSize, String bowToken) {
         this.maxVocabSize = maxVocabSize;
+        this.bowToken = bowToken;
 
         System.out.println("Filling initial vocabulary..");
         fillInitialVocab(data);
@@ -35,8 +39,21 @@ public class BPE implements Serializable {
      * @return Tokenized string
      */
     public String[] tokenize(String text) {
-        // TODO Implement operation
-        throw new UnsupportedOperationException("Not implemented");
+        List<String> words = Arrays.asList(text.split("\\s"));
+        List<String> result = words.parallelStream().map(x -> tokenizeWord(bowToken + x)).flatMap(List::stream).collect(Collectors.toList());
+
+        return result.toArray(new String[0]);
+    }
+
+    private List<String> tokenizeWord(String word) {
+        List<String> result = new ArrayList<>();
+        sortedVocab.forEach(x -> {
+            if (word.contains(x)) {
+                // TODO Finish
+            }
+        });
+
+        return result;
     }
 
     /**
@@ -78,13 +95,13 @@ public class BPE implements Serializable {
         vocab.addAll(
                 data.parallelStream().flatMap(text -> Arrays.stream(text.split(""))).collect(Collectors.toCollection(HashSet::new))
         );
+        vocab.add(bowToken);
         vocab.remove("\\s");
     }
 
     private void fillInternalData(List<String> data) {
         data.parallelStream().forEach(
-                text -> Arrays.asList(text.split("\\s")).forEach(part -> internalData.add(Arrays.asList(part.split(""))))
-        );
+                text -> Arrays.asList(text.split("\\s")).forEach(part -> internalData.add(Stream.concat(Stream.of(bowToken), Arrays.stream(part.split(""))).collect(Collectors.toList()))));
     }
 
     private void learn() {
@@ -122,7 +139,13 @@ public class BPE implements Serializable {
         }
 
         sortedVocab = new ArrayList<>(vocab);
-        sortedVocab.sort(Comparator.comparing(String::length).reversed().thenComparing(String::compareTo));
+        Comparator<String> comparator = (o1, o2) -> {
+            int len1 = o1.replace(bowToken, "").length() + (o1.startsWith(bowToken) ? 1 : 0);
+            int len2 = o2.replace(bowToken, "").length() + (o2.startsWith(bowToken) ? 1 : 0);
+
+            return len1 - len2;
+        };
+        sortedVocab.sort(comparator.reversed().thenComparing(String::compareTo));
     }
 
     private void merge(Pair<String, String> pair) {
@@ -146,5 +169,36 @@ public class BPE implements Serializable {
 
     private void clear() {
         internalData = internalData.parallelStream().filter(x -> x.size() > 1).collect(Collectors.toList());
+    }
+
+    private static class Pair<T, K> {
+        private final T key;
+        private final K value;
+
+        public Pair(T key, K value) {
+            this.key = key;
+            this.value = value;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Pair<?, ?> pair = (Pair<?, ?>) o;
+            return key.equals(pair.key) && value.equals(pair.value);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(key, value);
+        }
+
+        public T getKey() {
+            return key;
+        }
+
+        public K getValue() {
+            return value;
+        }
     }
 }

@@ -8,8 +8,7 @@ Some points:
 5. Tokenization is not implemented
 
 To do:
-1. Add ability to set number of threads
-2. Implement tokenization
+- Implement tokenization
 
 Source:<br>
 [Neural Machine Translation of Rare Words with Subword Units](https://arxiv.org/pdf/1508.07909.pdf)

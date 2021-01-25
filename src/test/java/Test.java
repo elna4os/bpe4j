@@ -1,9 +1,11 @@
 import junit.framework.TestCase;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class Test extends TestCase {
@@ -30,7 +32,7 @@ public class Test extends TestCase {
         System.out.println("Reading test data..");
         List<String> data = loadData().subList(0, lineLimit);
 
-        return new BPE(data, vocabSize);
+        return new BPE(data, vocabSize, "<bow>");
     }
 
     public void testLearning() {
@@ -39,18 +41,29 @@ public class Test extends TestCase {
     }
 
     public void testEncoding() {
-        // TODO Add test
+        BPE bpe = getBPE(1000, 100);
+        String[] tokens = bpe.tokenize("To be, or not to be: that is the question");
+        System.out.println(Arrays.toString(tokens));
     }
 
     public void testDecoding() {
-        // TODO Add test
+        // TODO Implement
     }
 
     public void testSerialization() {
-        // TODO Add test
+        BPE bpe = getBPE(1000, 100);
+        File root = new File(System.getProperty("user.home"), "/bpe4j");
+        root.mkdirs();
+        File file = new File(root, "bpe.txt");
+        bpe.serializeToFile(file);
     }
 
     public void testDeserialization() {
-        // TODO Add test
+        testSerialization();
+        File root = new File(System.getProperty("user.home"), "/bpe4j");
+        File file = new File(root, "bpe.txt");
+        BPE bpe = BPE.deserializeFromFile(file);
+        assert bpe != null;
+        System.out.println(bpe.getVocab());
     }
 }
