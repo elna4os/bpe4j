@@ -32,7 +32,7 @@ public class Test extends TestCase {
         System.out.println("Reading test data..");
         List<String> data = loadData().subList(0, lineLimit);
 
-        return new BPE(data, vocabSize, "<bow>");
+        return new BPE(data, vocabSize, "<w>", "</w>");
     }
 
     public void testLearning() {
@@ -42,12 +42,9 @@ public class Test extends TestCase {
 
     public void testEncoding() {
         BPE bpe = getBPE(1000, 100);
-        String[] tokens = bpe.tokenize("To be, or not to be: that is the question");
+        String[] tokens = bpe.tokenize("hello world");
+        System.out.println("hello, world!");
         System.out.println(Arrays.toString(tokens));
-    }
-
-    public void testDecoding() {
-        // TODO Implement
     }
 
     public void testSerialization() {
