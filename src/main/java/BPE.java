@@ -1,7 +1,6 @@
 import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Byte Pair Encoding implementation that uses parallelStream
@@ -11,16 +10,17 @@ public class BPE implements Serializable {
     private final HashSet<String> vocab = new HashSet<>();
     private List<String> sortedVocab;
     private List<List<String>> internalData = Collections.synchronizedList(new ArrayList<>());
-    private final String bowToken;
+    private String tokenStart = "<w>";
+    private String tokenEnd = "</w>";
 
     /**
      * @param data         Texts
      * @param maxVocabSize Vocabulary max size
-     * @param bowToken     Word beginning token
      */
-    public BPE(List<String> data, int maxVocabSize, String bowToken) {
+    public BPE(List<String> data, int maxVocabSize, String tokenStart, String tokenEnd) {
         this.maxVocabSize = maxVocabSize;
-        this.bowToken = bowToken;
+        this.tokenStart = tokenStart;
+        this.tokenEnd = tokenEnd;
 
         System.out.println("Filling initial vocabulary..");
         fillInitialVocab(data);
@@ -40,28 +40,8 @@ public class BPE implements Serializable {
      */
     public String[] tokenize(String text) {
         List<String> words = Arrays.asList(text.split("\\s"));
-        List<String> result = words.parallelStream().map(x -> tokenizeWord(bowToken + x)).flatMap(List::stream).collect(Collectors.toList());
 
-        return result.toArray(new String[0]);
-    }
-
-    private List<String> tokenizeWord(String word) {
-        List<String> result = new ArrayList<>();
-        sortedVocab.forEach(x -> {
-            if (word.contains(x)) {
-                // TODO Finish
-            }
-        });
-
-        return result;
-    }
-
-    /**
-     * @param tokens Tokenized string
-     * @return Decoded string
-     */
-    public String detokenize(String[] tokens, String joiner) {
-        return String.join(joiner, tokens);
+        return words.parallelStream().map(this::tokenizeWord).flatMap(List::stream).toArray(String[]::new);
     }
 
     /**
@@ -95,13 +75,13 @@ public class BPE implements Serializable {
         vocab.addAll(
                 data.parallelStream().flatMap(text -> Arrays.stream(text.split(""))).collect(Collectors.toCollection(HashSet::new))
         );
-        vocab.add(bowToken);
         vocab.remove("\\s");
     }
 
     private void fillInternalData(List<String> data) {
         data.parallelStream().forEach(
-                text -> Arrays.asList(text.split("\\s")).forEach(part -> internalData.add(Stream.concat(Stream.of(bowToken), Arrays.stream(part.split(""))).collect(Collectors.toList()))));
+                text -> Arrays.asList(text.split("\\s")).forEach(part -> internalData.add(Arrays.asList(part.split(""))))
+        );
     }
 
     private void learn() {
@@ -139,13 +119,7 @@ public class BPE implements Serializable {
         }
 
         sortedVocab = new ArrayList<>(vocab);
-        Comparator<String> comparator = (o1, o2) -> {
-            int len1 = o1.replace(bowToken, "").length() + (o1.startsWith(bowToken) ? 1 : 0);
-            int len2 = o2.replace(bowToken, "").length() + (o2.startsWith(bowToken) ? 1 : 0);
-
-            return len1 - len2;
-        };
-        sortedVocab.sort(comparator.reversed().thenComparing(String::compareTo));
+        sortedVocab.sort(Comparator.comparing(String::length).reversed().thenComparing(String::compareTo));
     }
 
     private void merge(Pair<String, String> pair) {
@@ -200,5 +174,44 @@ public class BPE implements Serializable {
         public K getValue() {
             return value;
         }
+    }
+
+    private List<String> tokenizeWord(String word) {
+        List<Pair<String, Integer>> span = new ArrayList<>();
+        for (String x : sortedVocab) {
+            if (getSpanLength(span) >= word.length())
+                break;
+            if (word.contains(x)) {
+                int idx = word.indexOf(x);
+                if (isAllowedIdx(idx, span))
+                    span.add(new Pair<>(x, idx));
+                while (idx >= 0) {
+                    idx = word.indexOf(x, idx + 1);
+                    if (idx >= 0 && isAllowedIdx(idx, span))
+                        span.add(new Pair<>(x, idx));
+                }
+            }
+        }
+        span.sort(Comparator.comparing(Pair::getValue));
+        List<String> result = span.stream().map(Pair::getKey).collect(Collectors.toList());
+        result.add(0, tokenStart);
+        result.add(tokenEnd);
+
+        return result;
+    }
+
+    private boolean isAllowedIdx(int idx, List<Pair<String, Integer>> span) {
+        for (Pair<String, Integer> pair : span) {
+            String token = pair.getKey();
+            int start = pair.getValue();
+            if (idx >= start && idx < start + token.length())
+                return false;
+        }
+
+        return true;
+    }
+
+    private int getSpanLength(List<Pair<String, Integer>> span) {
+        return span.stream().mapToInt(x -> x.getKey().length()).sum();
     }
 }
