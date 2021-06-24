@@ -3,24 +3,29 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Byte Pair Encoding implementation that uses parallelStream
+ * Byte Pair Encoding very basic implementation
  */
-public class BPE implements Serializable {
+public class BytePairEncoding implements Serializable {
     private final int maxVocabSize;
+    private final int rounds;
     private final HashSet<String> vocab = new HashSet<>();
     private List<String> sortedVocab;
     private List<List<String>> internalData = Collections.synchronizedList(new ArrayList<>());
-    private String tokenStart = "<w>";
-    private String tokenEnd = "</w>";
+    private final String tokenStart;
+    private final String tokenEnd;
 
     /**
-     * @param data         Texts
-     * @param maxVocabSize Vocabulary max size
+     * @param data         Data to learn from
+     * @param maxVocabSize Max vocabulary size
+     * @param rounds       Number of iterations
+     * @param tokenStart   Token denoting beginning of the word
+     * @param tokenEnd     Token denoting ending of the word
      */
-    public BPE(List<String> data, int maxVocabSize, String tokenStart, String tokenEnd) {
+    public BytePairEncoding(List<String> data, int maxVocabSize, int rounds, String tokenStart, String tokenEnd) {
         this.maxVocabSize = maxVocabSize;
         this.tokenStart = tokenStart;
         this.tokenEnd = tokenEnd;
+        this.rounds = rounds;
 
         System.out.println("Filling initial vocabulary..");
         fillInitialVocab(data);
@@ -30,13 +35,16 @@ public class BPE implements Serializable {
         learn();
     }
 
+    /**
+     * @return BPE vocabulary
+     */
     public List<String> getVocab() {
         return sortedVocab;
     }
 
     /**
-     * @param text String to encode
-     * @return Tokenized string
+     * @param text String to tokenize
+     * @return Tokenization result
      */
     public String[] tokenize(String text) {
         List<String> words = Arrays.asList(text.split("\\s"));
@@ -45,11 +53,12 @@ public class BPE implements Serializable {
     }
 
     /**
-     * @param file File that will contain a serialized tokenizer
+     * @param file Output file
      */
     public void serializeToFile(File file) {
-        try (FileOutputStream fileOutputStream = new FileOutputStream(file.getPath());
-             ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream)) {
+        try (
+                FileOutputStream fileOutputStream = new FileOutputStream(file.getPath());
+                ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream)) {
             objectOutputStream.writeObject(this);
         } catch (IOException e) {
             e.printStackTrace();
@@ -57,13 +66,15 @@ public class BPE implements Serializable {
     }
 
     /**
-     * @param file File that contains a serialized tokenizer
-     * @return BPE instance if success, else null
+     * @param file Input file
+     * @return BytePairEncoding instance, if success, else null
      */
-    public static BPE deserializeFromFile(File file) {
-        try (FileInputStream fileInputStream = new FileInputStream(file.getPath());
-             ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream)) {
-            return (BPE) objectInputStream.readObject();
+    public static BytePairEncoding deserializeFromFile(File file) {
+        try (
+                FileInputStream fileInputStream = new FileInputStream(file.getPath());
+                ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream)
+        ) {
+            return (BytePairEncoding) objectInputStream.readObject();
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
@@ -116,6 +127,8 @@ public class BPE implements Serializable {
             merge(winner);
             clear();
             System.out.printf("round=%d, vocab_size=%d, internal_data_size=%d\n", round++, vocab.size(), internalData.size());
+            if (round >= rounds)
+                break;
         }
 
         sortedVocab = new ArrayList<>(vocab);

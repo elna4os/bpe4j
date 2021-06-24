@@ -1,66 +1,32 @@
 import junit.framework.TestCase;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 public class Test extends TestCase {
-    private List<String> loadData() {
-        List<String> result = new ArrayList<>();
-        String path = this.getClass().getResource("/book.txt").getPath();
-        try (BufferedReader bufferedReader = new BufferedReader(new FileReader(path))) {
-            int lineCnt = 0;
-            for (String line; (line = bufferedReader.readLine()) != null; ) {
-                if (line.length() > 0) {
-                    result.add(line.trim());
-                    lineCnt++;
-                }
-            }
-            System.out.printf("Read %d lines..\n", lineCnt);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return result;
-    }
-
-    private BPE getBPE(int lineLimit, int vocabSize) {
-        System.out.println("Reading test data..");
-        List<String> data = loadData().subList(0, lineLimit);
-
-        return new BPE(data, vocabSize, "<w>", "</w>");
-    }
-
-    public void testLearning() {
-        BPE bpe = getBPE(1000, 100);
-        System.out.println("Vocabulary: " + bpe.getVocab());
-    }
-
-    public void testEncoding() {
-        BPE bpe = getBPE(1000, 100);
-        String[] tokens = bpe.tokenize("hello world");
-        System.out.println("hello, world!");
+    public void testBasic() {
+        List<String> data = Arrays.asList(
+                "I want to be an actor, Dad. I want to go on stage.",
+                "You should be a banker, Tom, and earn a decent wage.",
+                "I want to be a barber, Dad. I want to do people’s hair.",
+                "You should be a pilot Tom, and work for British Air.",
+                "I want to be a clown, Dad. I think I am very funny.",
+                "You should be a driver, Tom, and earn a lot of money.",
+                "I want to be a barman, Dad, so I can drink a lot of beer!",
+                "A barman! You are joking, Tom. That isn’t a career!",
+                "I want to go into politics, Dad, and put the country right.",
+                "I think that’s an excellent idea.",
+                "Let’s tell your mother tonight."
+        );
+        BytePairEncoding bpe = new BytePairEncoding(
+                data,
+                100,
+                100,
+                "<w>",
+                "</w>"
+        );
+        String[] tokens = bpe.tokenize("I want to ride a bicycle");
+        System.out.println("I want to be an actor, Dad. I want to go on stage.");
         System.out.println(Arrays.toString(tokens));
-    }
-
-    public void testSerialization() {
-        BPE bpe = getBPE(1000, 100);
-        File root = new File(System.getProperty("user.home"), "/bpe4j");
-        root.mkdirs();
-        File file = new File(root, "bpe.txt");
-        bpe.serializeToFile(file);
-    }
-
-    public void testDeserialization() {
-        testSerialization();
-        File root = new File(System.getProperty("user.home"), "/bpe4j");
-        File file = new File(root, "bpe.txt");
-        BPE bpe = BPE.deserializeFromFile(file);
-        assert bpe != null;
-        System.out.println(bpe.getVocab());
     }
 }
